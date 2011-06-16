@@ -1,9 +1,8 @@
 
-//transition_names = {};
-//transition_names[[undefined,'blocked']] = 'init';
-//transition_names[['blocked','ready']] = '[33;1mready[m';
-//transition_names[['ready','running']] = '[32;1mwake up[m';
-//transition_names[['running','completed']] = '[31;1mcompleted[m';
+transition_names = {};
+transition_names[[undefined,'blocked']] = 'init';
+transition_names[['blocked','running']] = '[32;1mwake up[m';
+transition_names[['running','completed']] = '[31;1mcompleted[m';
 
 
 
@@ -16,7 +15,7 @@ Job = function (name, deps, duty) {
 
 Job.prototype.restate = function (state) {
   var transition = [this.state, state];
-  var transition_name = //transition_names[transition] ||
+  var transition_name = transition_names[transition] ||
     '[35;1m' +
     transition.join(' -> ')
     + '[m'
@@ -76,15 +75,17 @@ Scheduler.prototype.run = function (callback) {
       .filter(function (job) {
         // filter all blocked jobs where all dependecies are completed 
         // they are now 'ready'
-        return job.state === 'blocked' &&
+        if (job.state === 'blocked' &&
             job.deps
                 .filter(function (job) {
                   return job.state === 'completed';
                 })
-                .length === job.deps.length;
+                .length === job.deps.length) {
+          job.restate('running');
+          return true;
+        };
       })
       .forEach(function (job) {
-        job.restate('running');
         job.duty(function (result) {
           job.restate('completed');
           job.result = result;
@@ -97,7 +98,7 @@ Scheduler.prototype.run = function (callback) {
 
 
 function easy_task(callback) {
-  console.log('easy_task:', this);
+  //console.log('easy_task:', this);
   callback(42);
 };
 
