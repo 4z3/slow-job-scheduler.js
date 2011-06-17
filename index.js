@@ -42,7 +42,8 @@ Scheduler.prototype.add = function (name, deps, duty) {
 Scheduler.prototype.run = function (callback) {
 
   if (callback) {
-    this.add(Object.keys(this.jobs), Object.keys(this.jobs), callback);
+    this.add(JSON.stringify(Object.keys(this.jobs)),
+        Object.keys(this.jobs), callback);
   };
 
   var jobs = this.jobs;
@@ -86,9 +87,15 @@ Scheduler.prototype.run = function (callback) {
         };
       })
       .forEach(function (job) {
-        job.duty(function (result) {
+        var context = {};
+        job.deps.forEach(function (dep) {
+            context[dep.name] = dep.result;
+        });
+        job.duty.call(context, function (result) {
           job.restate('completed');
-          job.result = result;
+          if (arguments.length > 0) {
+            job.result = result;
+          };
           reschedule(turn);
         });
       });
@@ -97,37 +104,97 @@ Scheduler.prototype.run = function (callback) {
 
 
 
-function easy_task(callback) {
-  //console.log('easy_task:', this);
-  callback(42);
-};
+function test() {
 
-function hard_task(callback) {
-  setTimeout(callback, 1000);
-};
+  function easy_task(callback) {
+    //console.log('easy_task:', this);
+    callback(42);
+  };
 
-function broken_task(callback) {
+  function hard_task(callback) {
+    setTimeout(callback, 1000);
+  };
+
+  function broken_task(callback) {
+  };
+
+  scheduler = new Scheduler();
+
+  scheduler.add('J1', ['J2','J3', 'J5'], easy_task);
+  //scheduler.add('J1', ['J2','J3', 'J5'], broken_task);
+  scheduler.add('J2', ['J3','J4'], hard_task);
+  scheduler.add('J3', ['J4'], easy_task);
+  scheduler.add('J4', [], hard_task);
+  scheduler.add('J5', ['J4'], easy_task);
+
+  //if (0)
+  scheduler.run(function () {
+    //console.log('done', pools);
+    console.log('done:', this);
+    //console.log('');
+    //console.log('summary');
+    //console.log('=======');
+    //Object.keys(pools).forEach(function (name) {
+    //  var pool = pools[name];
+    //  console.log(name, 'jobs:', pool.length, pool.map(function (job) { return job.name }));
+    //});
+  });
 };
+
+
+
+
 
 scheduler = new Scheduler();
 
-scheduler.add('J1', ['J2','J3', 'J5'], easy_task);
-//scheduler.add('J1', ['J2','J3', 'J5'], broken_task);
-scheduler.add('J2', ['J3','J4'], hard_task);
-scheduler.add('J3', ['J4'], easy_task);
-scheduler.add('J4', [], hard_task);
-scheduler.add('J5', ['J4'], easy_task);
 
-//if (0)
-scheduler.run(function () {
-  //console.log('done', pools);
-  console.log('done:', this);
-  //console.log('');
-  //console.log('summary');
-  //console.log('=======');
-  //Object.keys(pools).forEach(function (name) {
-  //  var pool = pools[name];
-  //  console.log(name, 'jobs:', pool.length, pool.map(function (job) { return job.name }));
-  //});
+modules = {};
+function load_module(name) {
+  console.log('load module:', JSON.stringify(name));
+  try {
+    var module = modules[name] = require('../../4z3/Espresso/modules/' + name);
+    if (!module.deps) {
+      module.deps = [];
+    };
+    module.name = name;
+  } catch (exn) {
+    console.error(exn.stack);
+  };
+};
+
+function schedule(name) {
+  var scheduler = new Scheduler();
+  var scheduled_modules = {};
+  var queue = [name];
+
+  while (queue.length > 0) {
+    name = queue.pop();
+    if (!(name in scheduled_modules)) {
+      if (!(name in modules)) {
+        load_module(name);
+      };
+      if (name in modules) {
+        var module = scheduled_modules[name] = modules[name];
+
+        console.log('schedule module: ' + JSON.stringify(name));
+
+        scheduler.add(module.name, module.deps, module.duty);
+        module.deps.forEach(function (name) {
+          queue.push(name);
+        });
+      } else {
+        throw new Error('no such module: ' + JSON.stringify(name));
+      };
+    };
+  };
+
+  return scheduler;
+};
+
+
+schedule('config').run(function () {
+  console.log();
+  console.log('== summary ==');
+  console.log(this);
 });
 
