@@ -192,9 +192,10 @@ function schedule(name) {
 };
 
 
-schedule('index.html').run(function () {
+schedule('index.html').run(function (finish) {
   console.log();
   console.log('== summary ==');
   console.log(this);
+  finish();
 });
 
