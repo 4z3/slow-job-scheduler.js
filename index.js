@@ -165,7 +165,7 @@ function load_module(name) {
 function schedule(name) {
   var scheduler = new Scheduler();
   var scheduled_modules = {};
-  var queue = [name];
+  var queue = name instanceof Array ? name.slice() : [name];
 
   while (queue.length > 0) {
     name = queue.pop();
@@ -213,7 +213,7 @@ function schedule(name) {
 };
 
 
-schedule('index.html').run(function (finish) {
+schedule(process.argv.slice(2)).run(function (finish) {
   console.log();
   console.log('== summary ==');
   console.log(this);
