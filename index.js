@@ -174,6 +174,8 @@ function schedule(name) {
         load_module(name);
       };
       if (name in modules) {
+        // TODO use modules[name] as prototype of module, so we can modify
+        //      it [by adding revdeps] w/o mangling the original.
         var module = scheduled_modules[name] = modules[name];
 
         console.log('schedule module: ' + JSON.stringify(name));
@@ -187,6 +189,25 @@ function schedule(name) {
       };
     };
   };
+
+  // add reverse dependencies to modules
+  Object.keys(scheduled_modules).forEach(function (name) {
+    var module = scheduled_modules[name];
+    if ('revdeps' in module) {
+      module.revdeps.forEach(function (revdep) {
+        if (revdep in scheduled_modules) {
+          var module = scheduled_modules[revdep];
+          if (module.deps.indexOf(name) < 0) {
+            console.log('revdep:', revdep, '<-', name);
+            module.deps.push(name);
+          };
+        } else {
+          console.log('revdep:', revdep, '<-', name, 'not. '
+            , revdep, 'is no target');
+        };
+      });
+    };
+  });
 
   return scheduler;
 };
