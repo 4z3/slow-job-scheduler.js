@@ -87,7 +87,7 @@ Scheduler.prototype.run = function (callback) {
         };
       })
       .forEach(function (job) {
-        var context = {};
+        var context = { self: job };
         job.deps.forEach(function (dep) {
             context[dep.name] = dep.result;
         });
