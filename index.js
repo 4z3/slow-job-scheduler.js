@@ -216,7 +216,19 @@ function schedule(name) {
 schedule(process.argv.slice(2)).run(function (finish) {
   console.log();
   console.log('== summary ==');
-  console.log(this);
+
+  (function walk (that) {
+    Object.keys(that).forEach(function (x) {
+      if (that[x] instanceof Buffer || that[x] instanceof Job) {
+        that[x] = '[...]';
+      } else if (that[x] instanceof Object) {
+        walk(that[x]);
+      };
+    });
+  })(this);
+
+
+  console.log(require('util').inspect(this, false, 100));
   finish();
 });
 
